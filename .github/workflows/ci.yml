@@ -1,0 +1,193 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+run-name: CI on ${{ github.head_ref || github.ref_name }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      guest: ${{ steps.filter.outputs.guest }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # private repo: paths-filter's own fetch of the pre-push commit needs auth, which persist-credentials:false strips
+          persist-credentials: false
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            guest:
+              - '.github/workflows/ci.yml'
+              - 'guest/**'
+            shared:
+              - '.github/workflows/ci.yml'
+              - 'shared/**'
+              - 'settings.gradle.kts'
+              - 'build.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+              # guest.wasm is Chasm's codegen input for shared/; a guest/
+              # change (e.g. renaming an export) can break shared's build.
+              - 'guest/**'
+
+  guest-lint:
+    needs: changes
+    if: needs.changes.outputs.guest == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: guest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76 # v1.25
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package registry
+        run: moon update
+
+      - name: Check formatting
+        run: moon fmt --check
+
+      - name: Check packages
+        run: moon check --deny-warn --target all
+
+      - name: Verify generated interfaces are current
+        run: moon info && git diff --exit-code
+
+  guest-test:
+    needs: changes
+    if: needs.changes.outputs.guest == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: guest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76 # v1.25
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package registry
+        run: moon update
+
+      - name: Test all targets
+        run: moon test --target all
+
+      - name: Check full coverage
+        run: |
+          moon test --enable-coverage
+          moon coverage analyze
+
+  # macos-* runner required: building the iosSimulatorArm64 target needs
+  # Xcode's toolchain, which is unavailable on ubuntu/windows runners.
+  shared-lint:
+    needs: changes
+    if: needs.changes.outputs.shared == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76 # v1.25
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Chasm's codegen plugin reads guest.wasm at configure/build time, so
+      # any Gradle task touching shared/ needs this to exist first.
+      - name: Build guest.wasm
+        working-directory: guest
+        run: |
+          moon update
+          moon build --target wasm --release
+          mkdir -p ../shared/src/commonMain/resources
+          cp _build/wasm/release/build/mbt_dodge_kmp_guest.wasm ../shared/src/commonMain/resources/guest.wasm
+
+      - name: Kotlin lint (kotlinter)
+        run: ./gradlew lintKotlin
+
+  shared-test:
+    needs: changes
+    if: needs.changes.outputs.shared == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76 # v1.25
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build guest.wasm
+        working-directory: guest
+        run: |
+          moon update
+          moon build --target wasm --release
+          mkdir -p ../shared/src/commonMain/resources
+          cp _build/wasm/release/build/mbt_dodge_kmp_guest.wasm ../shared/src/commonMain/resources/guest.wasm
+
+      - name: Run JVM and iOS simulator tests
+        run: ./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test
+
+  # Single point of truth for branch protection
+  gate:
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - guest-lint
+      - guest-test
+      - shared-lint
+      - shared-test
+    if: always()
+    steps:
+      - name: Verify all required jobs succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        shell: bash
+        run: |
+          echo "One or more required jobs did not succeed."
+          exit 1

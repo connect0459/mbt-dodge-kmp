@@ -1,0 +1,42 @@
+# Security Policy
+
+This is a small hobby game, not a published library with external users
+consuming it as a dependency — `guest.wasm` is always built from this
+repository's own source, never loaded from an untrusted or third-party
+origin. The scope below is narrower than a typical library's because of
+that.
+
+## Supported Versions
+
+Only the `main` branch is maintained. There are no tagged releases.
+
+| Version | Supported |
+| :------ | :-------- |
+| `main`  | ✓         |
+
+## Reporting a Vulnerability
+
+**Please do not open a public GitHub issue for security vulnerabilities.**
+
+Use GitHub's [private vulnerability reporting][private-report] feature to disclose issues confidentially. You will receive an acknowledgment within **5 business days** and a resolution timeline once the report has been triaged.
+
+[private-report]: https://github.com/connect0459/mbt-dodge-kmp/security/advisories/new
+
+## Scope
+
+The following vulnerability classes are in scope for this project:
+
+- **Sandbox escapes at the guest/host boundary** — any way for code running inside `guest.wasm` (via Chasm's interpreter, embedded in the `shared` KMP module) to read or write memory, call functions, or otherwise affect the host process outside the linear memory and exported functions Chasm explicitly grants it.
+- **Memory-safety bugs in the Kotlin host bridge** — `shared/` reads guest linear memory directly to decode `spawn_block`'s heap-boxed tuple return; an out-of-bounds read/write there is in scope.
+- **Supply-chain issues in pinned dependencies** — `shared/build.gradle.kts` pins Chasm and its transitive dependencies to exact versions; a compromised release of any of them is in scope for a coordinated response, even though the fix (bump the pin) lives upstream.
+
+The following are **out of scope**:
+
+- Anything that requires the attacker to already control the content of `guest/` in this repository — that's a source-code change, not a vulnerability.
+- Issues in third-party dependencies themselves (report those upstream; this project will track and apply the fix).
+- Theoretical issues without a reproducible proof-of-concept.
+- Gameplay balance or scoring exploits — not a security concern.
+
+## Disclosure Policy
+
+Once a fix is ready, a GitHub Security Advisory will be published with full details. The typical timeline from report to public disclosure is **30 days**, though this may be extended by mutual agreement when a fix requires significant changes.

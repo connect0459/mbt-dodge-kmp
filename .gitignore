@@ -1,0 +1,37 @@
+.DS_Store
+
+# APM dependencies
+apm_modules/
+.agents/
+.claude/
+
+# MoonBit guest module build artifacts (guest/ is the moon.mod root, not repo root)
+guest/_build/
+guest/.mooncakes/
+guest/.moonagent/
+guest/*.coverage
+guest/_coverage/
+guest/trace.json
+
+# Gradle / Kotlin (shared/, androidApp/, and any other Gradle module once scaffolded)
+.gradle/
+.kotlin/
+build/
+*/build/
+local.properties
+*.iml
+.idea/
+
+# guest.wasm is a moon build artifact, not source; copy it from
+# guest/_build/wasm/release/build/ via `just build-guest-wasm`
+shared/src/commonMain/resources/*.wasm
+
+# Xcode / Swift (iosApp/, once scaffolded; see also github/gitignore Xcode.gitignore, Swift.gitignore)
+iosApp/**/xcuserdata/
+iosApp/**/*.hmap
+iosApp/**/*.dSYM
+iosApp/**/*.dSYM.zip
+iosApp/*.xcodeproj/
+iosApp/*.xcworkspace/
+iosApp/Derived/
+iosApp/Tuist/.build/
