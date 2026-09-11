@@ -1,6 +1,6 @@
 # todo - mbt-dodge-kmp
 
-Current state: **Milestone 0 (scaffold) and Milestone 1 (`guest/` game rules) are complete.** All seven exported functions are implemented, TDD'd, and pass on all four MoonBit backends (`js`, `wasm`, `wasm-gc`, `native`) with 100% line coverage. `shared/` (Chasm wiring), the Kotlin domain layer, Android target, and both native UIs are not yet built.
+Current state: **Milestones 0-3 are complete.** `guest/`'s seven game-rule functions pass on all four MoonBit backends with 100% line coverage; `shared/` wires `guest.wasm` in via Chasm; a `GameRules`-abstracted Kotlin domain layer (`GameState`/`GameEngine.tick`) composes them into one immutable per-frame state transition, verified against the real compiled `guest.wasm` on `jvm` and `iosSimulatorArm64`. The Android target and both native UIs are not yet built.
 
 ---
 
@@ -54,11 +54,20 @@ Goal: wire `guest.wasm` into a KMP `shared` module via Chasm, same as `mbt-chasm
 
 - [ ] Not started
 
-## Milestone 3: Kotlin domain layer (not started)
+## Milestone 3: Kotlin domain layer
 
-Goal: `Block`/`GameState`/`GameEngine.tick` in `shared/src/commonMain`, composing per-tick `GuestService` calls into one immutable state transition. TDD against the real `GuestServiceImpl` (Detroit school — the guest/host boundary is not treated as external here).
+Goal: `Block`/`GameState`/`GameEngine.tick` in `shared/src/commonMain`, composing per-tick guest calls into one immutable state transition. TDD against the real compiled `guest.wasm` (Detroit school — the guest/host boundary is not treated as external here).
 
-- [ ] Not started
+- [x] **Introduced `GameRules` (in the `game` package) as the abstract port between domain and infrastructure**, per this project's layer-boundary rule: `GameEngine.tick` depends only on `GameRules`, never on `GuestService` or Chasm's embedding API directly. `ChasmGameRules` (in the `guest` package) is the adapter — this is also where the `Int` 0/1 ↔ `Boolean` translation happens, so the domain layer never has to think about the wasm marshaling convention decided in Milestone 1
+- [x] `ChasmGameRules` delegates the six scalar rules to the Chasm-generated `GuestServiceImpl`; `spawnBlock` keeps its own low-level `module`/`store`/`instance` (mirroring `GuestMemoryTest`) since `GuestServiceImpl` only ever exposes that export as a bare pointer — this means each `ChasmGameRules` instance loads `guest.wasm` twice (once inside `GuestServiceImpl`, once for the low-level decode). Accepted for now as a minor inefficiency, not a correctness issue; revisit only if Milestone 7's benchmark shows it matters
+- [x] `Block(x, y)` / `GameConfig(screenWidth, screenHeight, playerY, playerWidth, blockSize, fallSpeed, spawnInterval, hitMargin)` / `GameState(playerX, blocks, score, rngSeed, tickCount, isGameOver)` — all immutable data classes; `GameConfig` holds fixed per-game constants separately from `GameState`'s per-tick mutable state, since the two change for different reasons and mixing them would blur what a "state transition" actually transitions
+- [x] TDD (Red → Green) for `GameEngine.tick`'s agreed main paths, exercised against `createGameRules()` (real, compiled `guest.wasm`, no mock):
+  - clamps the player at both the left and right screen edges
+  - ends the game (`isGameOver = true`) when a falling block reaches the player
+  - awards a point and removes a block that falls past the screen without hitting the player
+  - is a no-op once the game is already over
+  - produces the identical resulting `GameState` from two independent `ChasmGameRules` instances given the same initial state and seed (spawn determinism, exercised at the whole-engine level rather than only at `spawn_block` itself)
+- [x] `./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test` — 21 tests total, all pass on both targets; `formatKotlin`/`lintKotlin` clean
 
 ## Milestone 4: Android target (not started)
 
