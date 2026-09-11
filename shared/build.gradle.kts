@@ -7,7 +7,7 @@ plugins {
 
 // Chasm's codegen output and our own generated GuestWasmBytes.kt aren't ours
 // to style. ktlint-gradle can't exclude generated KMP sources (see
-// mbt-chasm-kmp/docs/todo.md for the upstream bug); kotlinter's task-level
+// exp-mbt-chasm-kmp/docs/todo.md for the upstream bug); kotlinter's task-level
 // exclude works instead.
 tasks.withType<org.jmailen.gradle.kotlinter.tasks.ConfigurableKtLintTask>().configureEach {
     exclude { element -> element.file.path.contains("/generated/") }

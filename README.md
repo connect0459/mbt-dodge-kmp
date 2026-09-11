@@ -6,10 +6,10 @@ A small "dodge the falling blocks" game whose rules are written in [MoonBit](htt
 
 Two sibling spikes verified that this shape works and is fast enough:
 
-- [`mbt-wasmkit-ios`](https://github.com/connect0459/mbt-wasmkit-ios) — MoonBit `wasm` → [WasmKit](https://github.com/swiftwasm/WasmKit) → iOS (iOS-only; WasmKit is a Swift-only runtime)
-- [`mbt-chasm-kmp`](https://github.com/connect0459/mbt-chasm-kmp) — MoonBit `wasm` → Chasm → both iOS (Kotlin/Native) and Android (ART), with call-overhead measurements on every target comfortably inside a modest 2D game's per-frame budget
+- [`exp-mbt-wasmkit-ios`](https://github.com/connect0459/exp-mbt-wasmkit-ios) — MoonBit `wasm` → [WasmKit](https://github.com/swiftwasm/WasmKit) → iOS (iOS-only; WasmKit is a Swift-only runtime)
+- [`exp-mbt-chasm-kmp`](https://github.com/connect0459/exp-mbt-chasm-kmp) — MoonBit `wasm` → Chasm → both iOS (Kotlin/Native) and Android (ART), with call-overhead measurements on every target comfortably inside a modest 2D game's per-frame budget
 
-This project builds on `mbt-chasm-kmp`'s host architecture — the only one of the two verified on both platforms — to ship an actual game rather than another feasibility spike.
+This project builds on `exp-mbt-chasm-kmp`'s host architecture — the only one of the two verified on both platforms — to ship an actual game rather than another feasibility spike.
 
 ## Project structure
 
