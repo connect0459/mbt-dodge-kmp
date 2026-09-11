@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinter) apply false
     alias(libs.plugins.chasm) apply false
+    alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
 }
 
 allprojects {
