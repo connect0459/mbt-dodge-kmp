@@ -1,6 +1,6 @@
 # todo - mbt-dodge-kmp
 
-Current state: **Milestones 0-3 are complete.** `guest/`'s seven game-rule functions pass on all four MoonBit backends with 100% line coverage; `shared/` wires `guest.wasm` in via Chasm; a `GameRules`-abstracted Kotlin domain layer (`GameState`/`GameEngine.tick`) composes them into one immutable per-frame state transition, verified against the real compiled `guest.wasm` on `jvm` and `iosSimulatorArm64`. The Android target and both native UIs are not yet built.
+Current state: **Milestones 0-4 are complete.** `guest/`'s seven game-rule functions pass on all four MoonBit backends with 100% line coverage; `shared/` wires `guest.wasm` in via Chasm; a `GameRules`-abstracted Kotlin domain layer (`GameState`/`GameEngine.tick`) composes them into one immutable per-frame state transition, verified on `jvm`, `iosSimulatorArm64`, and now Android (`androidHostTest` and a real `connectedAndroidDeviceTest` run on an emulator) — the full `shared/` test suite passes identically on all three hosts. Both native UIs (`iosApp/`, `androidApp/`) are not yet built.
 
 ---
 
@@ -69,9 +69,15 @@ Goal: `Block`/`GameState`/`GameEngine.tick` in `shared/src/commonMain`, composin
   - produces the identical resulting `GameState` from two independent `ChasmGameRules` instances given the same initial state and seed (spawn determinism, exercised at the whole-engine level rather than only at `spawn_block` itself)
 - [x] `./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test` — 21 tests total, all pass on both targets; `formatKotlin`/`lintKotlin` clean
 
-## Milestone 4: Android target (not started)
+## Milestone 4: Android target
 
-- [ ] Not started
+Goal: add the Android KMP target to `shared/` and confirm the existing test suite (built up on `jvm`/`iosSimulatorArm64` in Milestones 2-3) passes unchanged on Android too — real ART, not just a JVM stand-in.
+
+- [x] `com.android.kotlin.multiplatform.library` (AGP `9.4.0`) + an `android { }` block inside `kotlin { }`, matching `mbt-chasm-kmp`'s own post-AGP-9.0 setup — `androidTarget()` is no longer compatible with `com.android.library` on this AGP line; `withHostTestBuilder`/`withDeviceTestBuilder` opt in to `androidHostTest` (fast, JVM-stub-backed) and `androidDeviceTest` (real ART) respectively
+- [x] `androidDeviceTest` needed `androidx.test:runner` + `androidx.test.ext:junit` added explicitly to its source set — the AGP plugin declares an `AndroidJUnitRunner` instrumentation automatically but doesn't add the artifact that class lives in, and **its absence fails silently** (`BUILD SUCCESSFUL`, but the JUnit XML reports `tests="0"`) rather than erroring, per `mbt-chasm-kmp`'s own account of hitting this. Added the dependencies up front rather than rediscovering the trap; confirmed both `testAndroidHostTest` and `connectedAndroidDeviceTest` report real `<testcase>` entries (24 tests each) in their JUnit XML output, not just a successful build
+- [x] `platformName()`'s existing `expect`/`actual` gained its `android` `actual` — same scaffold-health-probe convention as the `jvm`/`iosSimulatorArm64` additions in Milestone 0
+- [x] Ran against the already-booted `Medium_Phone` emulator (`arm64-v8a`, matching `mbt-chasm-kmp`'s own AVD choice) — `./gradlew :shared:connectedAndroidDeviceTest` passes all 24 tests (`PlatformTest`, `GuestServiceTest`, `GuestMemoryTest`, `GameEngineTest`) with zero new test code, confirming the entire domain layer built in Milestones 2-3 is host-agnostic by construction
+- [x] `./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test :shared:testAndroidHostTest :shared:connectedAndroidDeviceTest`, `formatKotlin`/`lintKotlin` — all pass
 
 ## Milestone 5: iOS UI (not started)
 
@@ -81,4 +87,5 @@ Goal: `Block`/`GameState`/`GameEngine.tick` in `shared/src/commonMain`, composin
 
 ## Open questions
 
-- [ ] None yet — will record here as they come up in Milestone 2 onward.
+- [ ] `ChasmGameRules` loads `guest.wasm` twice per instance (once inside `GuestServiceImpl`, once for `spawnBlock`'s low-level decode) — accepted in Milestone 3, revisit only if Milestone 7's benchmark shows it matters
+- [ ] No Android CI job (an emulator runner, e.g. `reactivecircus/android-emulator-runner`, would be needed) — not decided, not blocking, matching `mbt-chasm-kmp`'s own choice not to add one either. `shared-test`'s CI job currently only runs `jvmTest`/`iosSimulatorArm64Test`; Android is verified locally (`testAndroidHostTest`/`connectedAndroidDeviceTest`) but not yet gated in CI
