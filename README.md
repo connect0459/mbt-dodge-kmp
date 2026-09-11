@@ -1,5 +1,7 @@
 # mbt-dodge-kmp
 
+<img src="docs/images/dodge-demo.gif" alt="dodge-demo-movie" height="300">
+
 A small "dodge the falling blocks" game whose rules are written in [MoonBit](https://moonbitlang.com), compiled to `wasm`, and run inside a [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html) host via [Chasm](https://github.com/CharlieTap/chasm) — with native UI on each platform (SwiftUI on iOS, Android `View`s on Android).
 
 ## Background
