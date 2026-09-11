@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "mbt-dodge-kmp"
 
 include(":shared")
+include(":androidApp")
