@@ -171,8 +171,8 @@ jobs:
           mkdir -p ../shared/src/commonMain/resources
           cp _build/wasm/release/build/mbt_dodge_kmp_guest.wasm ../shared/src/commonMain/resources/guest.wasm
 
-      - name: Run JVM and iOS simulator tests
-        run: ./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test
+      - name: Run JVM, iOS simulator, and Android host tests
+        run: ./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test :shared:testAndroidHostTest
 
   # Single point of truth for branch protection
   gate:
