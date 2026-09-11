@@ -9,7 +9,7 @@ private let config = GameConfig(
   blockSize: 30,
   fallSpeed: 8,
   spawnInterval: 20,
-  hitMargin: 0
+  hitMargin: 8
 )
 
 private func newGameState() -> GameState {
